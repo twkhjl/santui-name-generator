@@ -6,6 +6,7 @@ const FONT_FILE_NAME = 'kaiu.ttf';
 const FONT_NAME = 'DFKai';
 const PAGE_WIDTH_MM = 210;
 const PAGE_HEIGHT_MM = 297;
+const LARGE_EXPORT_PAGE_THRESHOLD = 20;
 
 async function fetchFontBase64(fetchImpl = fetch) {
   const response = await fetchImpl(`/fonts/${FONT_FILE_NAME}`);
@@ -58,6 +59,21 @@ function drawPage(doc, { headerText, names, margin }) {
   );
 }
 
+function getRenderScale(pageCount) {
+  return pageCount > LARGE_EXPORT_PAGE_THRESHOLD ? 1 : 2;
+}
+
+function releaseCanvas(canvas) {
+  canvas.width = 0;
+  canvas.height = 0;
+}
+
+async function yieldToBrowser() {
+  await new Promise((resolve) => {
+    setTimeout(resolve, 0);
+  });
+}
+
 async function exportPreviewSheets(doc, sourceElement, renderCanvas) {
   const sheets = Array.from(sourceElement.querySelectorAll('.sheet'));
 
@@ -69,6 +85,8 @@ async function exportPreviewSheets(doc, sourceElement, renderCanvas) {
     await document.fonts.ready;
   }
 
+  const scale = getRenderScale(sheets.length);
+
   for (const [index, sheet] of sheets.entries()) {
     if (index > 0) {
       doc.addPage();
@@ -76,10 +94,16 @@ async function exportPreviewSheets(doc, sourceElement, renderCanvas) {
 
     const canvas = await renderCanvas(sheet, {
       backgroundColor: '#ffffff',
-      scale: 2,
+      scale,
       useCORS: true
     });
-    doc.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, PAGE_WIDTH_MM, PAGE_HEIGHT_MM);
+    const imageData = canvas.toDataURL('image/jpeg', 0.9);
+    doc.addImage(imageData, 'JPEG', 0, 0, PAGE_WIDTH_MM, PAGE_HEIGHT_MM, undefined, 'FAST');
+    releaseCanvas(canvas);
+
+    if ((index + 1) % 5 === 0) {
+      await yieldToBrowser();
+    }
   }
 }
 
