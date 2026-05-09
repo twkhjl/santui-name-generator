@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { normalizeConfig } from '../src/config.js';
+import { describe, expect, it, vi } from 'vitest';
+import { loadConfig, normalizeConfig } from '../src/config.js';
 
 describe('normalizeConfig', () => {
   it('保留合法兩字 fullNames 並去重', () => {
@@ -25,5 +25,24 @@ describe('normalizeConfig', () => {
         pdf: { format: 'a4', orientation: 'portrait', marginMm: 10 }
       })
     ).toThrow('可用化名不足 126 個');
+  });
+});
+
+describe('loadConfig', () => {
+  it('從 config.local.json 載入設定檔', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({
+        defaultHeaderText: '標題',
+        fullNames: [],
+        firstChars: ['王', '李', '陳', '林', '周', '吳', '徐', '黃', '張', '許', '鄭', '何'],
+        secondChars: ['明', '安', '華', '芳', '婷', '潔', '軒', '庭', '萱', '蓉', '雯', '欣'],
+        pdf: { format: 'a4', orientation: 'portrait', marginMm: 10 }
+      })
+    });
+
+    await loadConfig(fetchImpl);
+
+    expect(fetchImpl).toHaveBeenCalledWith('/config.local.json');
   });
 });

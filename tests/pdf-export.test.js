@@ -1,8 +1,38 @@
 import { describe, expect, it, vi } from 'vitest';
 import { exportPdf } from '../src/pdf-export.js';
 
+function createDocMock() {
+  const save = vi.fn();
+  const text = vi.fn();
+  const line = vi.fn();
+  const setFont = vi.fn();
+  const setFontSize = vi.fn();
+  const addFileToVFS = vi.fn();
+  const addFont = vi.fn();
+  const addPage = vi.fn();
+  const addImage = vi.fn();
+
+  return {
+    addFileToVFS,
+    addFont,
+    addImage,
+    addPage,
+    line,
+    save,
+    setFont,
+    setFontSize,
+    text
+  };
+}
+
+function createCanvasMock() {
+  return {
+    toDataURL: vi.fn(() => 'data:image/png;base64,fake')
+  };
+}
+
 describe('exportPdf', () => {
-  it('在未提供 126 個名字時拒絕輸出', async () => {
+  it('在未提供完整頁面名字時拒絕輸出', async () => {
     await expect(
       exportPdf({
         headerText: '標題',
@@ -12,39 +42,58 @@ describe('exportPdf', () => {
     ).rejects.toThrow('請先產生名字');
   });
 
-  it('建立 jsPDF 並儲存檔案', async () => {
-    const save = vi.fn();
-    const text = vi.fn();
-    const line = vi.fn();
-    const setFont = vi.fn();
-    const setFontSize = vi.fn();
-    const addFileToVFS = vi.fn();
-    const addFont = vi.fn();
-    const docFactory = vi.fn(() => ({
-      addFileToVFS,
-      addFont,
-      setFont,
-      setFontSize,
-      text,
-      line,
-      save
-    }));
+  it('有預覽元素時使用 HTML 預覽輸出 PDF', async () => {
+    document.body.innerHTML = '<section id="print-sheets"><section class="sheet"></section></section>';
+    const doc = createDocMock();
+    const renderCanvas = vi.fn().mockResolvedValue(createCanvasMock());
 
     await exportPdf(
       {
         headerText: '標題',
         names: Array.from({ length: 126 }, (_, index) => `名${String(index).padStart(3, '0')}`),
-        pdfConfig: { format: 'a4', orientation: 'portrait', marginMm: 10 }
+        pdfConfig: { format: 'a4', orientation: 'portrait', marginMm: 10 },
+        sourceElement: document.querySelector('#print-sheets')
       },
       {
-        createDocument: docFactory,
-        loadFontBase64: vi.fn().mockResolvedValue('ZmFrZS1mb250')
+        createDocument: vi.fn(() => doc),
+        renderCanvas
       }
     );
 
-    expect(docFactory).toHaveBeenCalled();
-    expect(addFileToVFS).toHaveBeenCalled();
-    expect(addFont).toHaveBeenCalled();
-    expect(save).toHaveBeenCalledWith('name-generator.pdf');
+    expect(renderCanvas).toHaveBeenCalledWith(expect.any(HTMLElement), {
+      backgroundColor: '#ffffff',
+      scale: 2,
+      useCORS: true
+    });
+    expect(doc.addImage).toHaveBeenCalledWith('data:image/png;base64,fake', 'PNG', 0, 0, 210, 297);
+    expect(doc.addFileToVFS).not.toHaveBeenCalled();
+    expect(doc.save).toHaveBeenCalledWith('name-generator.pdf');
+  });
+
+  it('多個預覽頁面會在 PDF 加頁', async () => {
+    document.body.innerHTML = `
+      <section id="print-sheets">
+        <section class="sheet"></section>
+        <section class="sheet"></section>
+      </section>
+    `;
+    const doc = createDocMock();
+
+    await exportPdf(
+      {
+        headerText: '標題',
+        names: Array.from({ length: 252 }, (_, index) => `名${String(index).padStart(3, '0')}`),
+        pdfConfig: { format: 'a4', orientation: 'portrait', marginMm: 10 },
+        sourceElement: document.querySelector('#print-sheets')
+      },
+      {
+        createDocument: vi.fn(() => doc),
+        renderCanvas: vi.fn().mockResolvedValue(createCanvasMock())
+      }
+    );
+
+    expect(doc.addImage).toHaveBeenCalledTimes(2);
+    expect(doc.addPage).toHaveBeenCalledTimes(1);
+    expect(doc.save).toHaveBeenCalledWith('name-generator.pdf');
   });
 });

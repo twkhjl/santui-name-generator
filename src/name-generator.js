@@ -1,4 +1,4 @@
-const REQUIRED_TOTAL = 126;
+export const NAMES_PER_PAGE = 126;
 
 function shuffle(items, randomFn) {
   const list = [...items];
@@ -11,7 +11,7 @@ function shuffle(items, randomFn) {
   return list;
 }
 
-export function buildUniqueNames(config, randomFn = Math.random) {
+export function buildUniqueNames(config, randomFn = Math.random, total = NAMES_PER_PAGE) {
   const result = [...config.fullNames];
   const used = new Set(result);
   const combinations = [];
@@ -29,7 +29,7 @@ export function buildUniqueNames(config, randomFn = Math.random) {
   const shuffled = shuffle(combinations, randomFn);
 
   for (const name of shuffled) {
-    if (result.length >= REQUIRED_TOTAL) {
+    if (result.length >= total) {
       break;
     }
 
@@ -37,11 +37,11 @@ export function buildUniqueNames(config, randomFn = Math.random) {
     used.add(name);
   }
 
-  if (result.length < REQUIRED_TOTAL) {
-    throw new Error('可用化名不足 126 個');
+  if (result.length < total) {
+    throw new Error(`可用化名不足 ${total} 個`);
   }
 
-  return result.slice(0, REQUIRED_TOTAL);
+  return result.slice(0, total);
 }
 
 export function chunkNames(names, rowCount = 14, columnCount = 9) {
@@ -50,5 +50,11 @@ export function chunkNames(names, rowCount = 14, columnCount = 9) {
       { length: columnCount },
       (_, columnIndex) => names[rowIndex * columnCount + columnIndex]
     )
+  );
+}
+
+export function chunkPages(names, pageSize = NAMES_PER_PAGE) {
+  return Array.from({ length: Math.ceil(names.length / pageSize) }, (_, pageIndex) =>
+    names.slice(pageIndex * pageSize, (pageIndex + 1) * pageSize)
   );
 }

@@ -1,4 +1,5 @@
 const REQUIRED_TOTAL = 126;
+const CONFIG_PATH = '/config.local.json';
 const TWO_CJK_REGEX = /^[\u4e00-\u9fff]{2}$/u;
 
 function unique(items) {
@@ -36,7 +37,7 @@ export function normalizeConfig(rawConfig) {
 }
 
 export async function loadConfig(fetchImpl = fetch) {
-  const response = await fetchImpl('/config.json');
+  const response = await fetchImpl(CONFIG_PATH);
 
   if (!response.ok) {
     throw new Error('設定檔讀取失敗');

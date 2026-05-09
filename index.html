@@ -13,6 +13,10 @@
           <span>上方文字</span>
           <textarea id="header-input" rows="3"></textarea>
         </label>
+        <label class="field field-inline">
+          <span>PDF 頁數</span>
+          <input id="page-count-input" type="number" min="1" step="1" value="1" />
+        </label>
         <div class="actions">
           <button id="generate-button" type="button">產生名字</button>
           <button id="export-button" type="button">匯出 PDF</button>
@@ -20,10 +24,7 @@
         <p id="status" class="status" role="status"></p>
       </section>
 
-      <section id="print-sheet" class="sheet">
-        <p id="header-preview" class="header-preview"></p>
-        <table id="name-table" class="name-table" aria-label="假名表格"></table>
-      </section>
+      <div id="print-sheets" class="sheets"></div>
     </main>
   </body>
 </html>
