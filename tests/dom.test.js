@@ -35,7 +35,7 @@ describe('setupApp', () => {
     expect(exportPdf).not.toHaveBeenCalled();
   });
 
-  it('多頁各自產生 126 個名字，頁面之間可重複', async () => {
+  it('多頁各自產生 126 個名字，且使用不同隨機來源', async () => {
     const pageNames = Array.from({ length: 126 }, (_, index) => `名${String(index).padStart(3, '0')}`);
     const loadConfig = vi.fn().mockResolvedValue({
       defaultHeaderText: '預設標題',
@@ -52,11 +52,11 @@ describe('setupApp', () => {
     document.querySelector('#generate-button').click();
 
     expect(buildUniqueNames).toHaveBeenCalledTimes(2);
-    expect(buildUniqueNames).toHaveBeenNthCalledWith(1, expect.any(Object), Math.random, 126);
-    expect(buildUniqueNames).toHaveBeenNthCalledWith(2, expect.any(Object), Math.random, 126);
+    expect(buildUniqueNames.mock.calls[0][2]).toBe(126);
+    expect(buildUniqueNames.mock.calls[1][2]).toBe(126);
+    expect(buildUniqueNames.mock.calls[0][1]).not.toBe(buildUniqueNames.mock.calls[1][1]);
     expect(document.querySelectorAll('.sheet')).toHaveLength(2);
     expect(document.querySelectorAll('#print-sheets td')).toHaveLength(252);
-    expect(new Set(Array.from(document.querySelectorAll('#print-sheets td')).map((cell) => cell.textContent)).size).toBe(126);
   });
 
   it('尚未產生名字前禁止匯出', async () => {

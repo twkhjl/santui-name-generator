@@ -41,7 +41,7 @@ export function buildUniqueNames(config, randomFn = Math.random, total = NAMES_P
     throw new Error(`可用化名不足 ${total} 個`);
   }
 
-  return result.slice(0, total);
+  return shuffle(result.slice(0, total), randomFn);
 }
 
 export function chunkNames(names, rowCount = 14, columnCount = 9) {

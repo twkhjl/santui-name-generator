@@ -23,9 +23,23 @@ function parsePageCount(inputElement) {
   return Number.isFinite(pageCount) && pageCount > 0 ? pageCount : 1;
 }
 
+function createSeededRandom(seed) {
+  let state = seed + 0x6d2b79f5;
+
+  return () => {
+    state += 0x6d2b79f5;
+    let value = state;
+    value = Math.imul(value ^ (value >>> 15), value | 1);
+    value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
+    return ((value ^ (value >>> 14)) >>> 0) / 0x100000000;
+  };
+}
+
 function buildNamesForPages(config, pageCount, buildUniqueNames) {
-  return Array.from({ length: pageCount }, () =>
-    buildUniqueNames(config, Math.random, NAMES_PER_PAGE)
+  const baseSeed = Math.floor(Math.random() * 0x100000000);
+
+  return Array.from({ length: pageCount }, (_, pageIndex) =>
+    buildUniqueNames(config, createSeededRandom(baseSeed + pageIndex + 1), NAMES_PER_PAGE)
   ).flat();
 }
 

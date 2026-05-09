@@ -5,7 +5,7 @@ const firstChars = ['王', '李', '陳', '林', '周', '吳', '徐', '黃', '張
 const secondChars = ['明', '安', '華', '芳', '婷', '潔', '軒', '庭', '萱', '蓉', '雯', '欣'];
 
 describe('buildUniqueNames', () => {
-  it('先使用 fullNames，再用字池補足到 126', () => {
+  it('使用 fullNames 與字池補足到 126 並維持唯一', () => {
     const random = vi.fn(() => 0);
     const names = buildUniqueNames(
       {
@@ -18,8 +18,22 @@ describe('buildUniqueNames', () => {
 
     expect(names).toHaveLength(126);
     expect(new Set(names).size).toBe(126);
-    expect(names[0]).toBe('王明');
-    expect(names[1]).toBe('李安');
+    expect(names).toContain('王明');
+    expect(names).toContain('李安');
+  });
+
+  it('不同隨機來源會產生不同頁面順序', () => {
+    const config = {
+      fullNames: Array.from({ length: 126 }, (_, index) => `名${String(index).padStart(3, '0')}`),
+      firstChars: [],
+      secondChars: []
+    };
+    const pageOne = buildUniqueNames(config, () => 0.1);
+    const pageTwo = buildUniqueNames(config, () => 0.9);
+
+    expect(pageOne).toHaveLength(126);
+    expect(pageTwo).toHaveLength(126);
+    expect(pageOne.join('|')).not.toBe(pageTwo.join('|'));
   });
 
   it('指定數量不足時顯示需要的總數', () => {
