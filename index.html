@@ -36,10 +36,17 @@
       <section class="preview-panel" aria-label="預覽分頁">
         <div class="preview-toolbar">
           <button id="preview-prev-button" type="button" class="preview-nav">上一頁</button>
+          <div class="preview-jump-group">
+            <label class="sr-only" for="preview-page-input">跳轉頁碼</label>
+            <input id="preview-page-input" type="number" min="1" step="1" value="1" />
+            <button id="preview-jump-button" type="button" class="preview-jump-button">跳轉</button>
+          </div>
           <p id="preview-page-indicator" class="preview-page-indicator" aria-live="polite">0 / 0</p>
           <button id="preview-next-button" type="button" class="preview-nav">下一頁</button>
         </div>
-        <div id="preview-sheet" class="preview-sheet"></div>
+        <div class="preview-sheet-frame">
+          <div id="preview-sheet" class="preview-sheet"></div>
+        </div>
       </section>
 
       <div id="print-sheets" class="sheets sheets-export" aria-hidden="true"></div>

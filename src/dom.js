@@ -1,4 +1,4 @@
-import { chunkNames, chunkPages, NAMES_PER_PAGE } from './name-generator.js';
+import { chunkNames, NAMES_PER_PAGE } from './name-generator.js';
 
 function createSheet(headerText, names) {
   const rows = chunkNames(names);
@@ -25,9 +25,54 @@ function renderPreview(previewElement, headerText, pages, pageIndex) {
   previewElement.innerHTML = currentPage.length > 0 ? createSheet(headerText, currentPage) : '';
 }
 
-function updatePaginationControls(prevButton, nextButton, indicator, currentPageIndex, totalPages) {
+function updatePreviewScale(previewElement) {
+  if (!previewElement) {
+    return;
+  }
+
+  const previewSheet = previewElement.querySelector('.sheet');
+
+  if (!previewSheet) {
+    previewElement.style.setProperty('--preview-scale', '1');
+    return;
+  }
+
+  const frameWidth = previewElement.clientWidth;
+  const naturalWidth = previewSheet.offsetWidth;
+
+  if (!frameWidth || !naturalWidth) {
+    previewElement.style.setProperty('--preview-scale', '1');
+    return;
+  }
+
+  const scale = Math.min(frameWidth / naturalWidth, 1);
+  previewElement.style.setProperty('--preview-scale', String(scale));
+}
+
+function updatePaginationControls(
+  prevButton,
+  nextButton,
+  indicator,
+  pageInput,
+  jumpButton,
+  currentPageIndex,
+  totalPages
+) {
+  const displayPage = totalPages === 0 ? 0 : currentPageIndex + 1;
+
   if (indicator) {
-    indicator.textContent = totalPages === 0 ? '0 / 0' : `${currentPageIndex + 1} / ${totalPages}`;
+    indicator.textContent = `${displayPage} / ${totalPages}`;
+  }
+
+  if (pageInput) {
+    pageInput.min = totalPages === 0 ? '0' : '1';
+    pageInput.max = String(totalPages);
+    pageInput.value = String(displayPage);
+    pageInput.disabled = totalPages <= 1;
+  }
+
+  if (jumpButton) {
+    jumpButton.disabled = totalPages <= 1;
   }
 
   if (prevButton) {
@@ -39,9 +84,13 @@ function updatePaginationControls(prevButton, nextButton, indicator, currentPage
   }
 }
 
+function parsePositiveInteger(value, fallback = 1) {
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
 function parsePageCount(inputElement) {
-  const pageCount = Number.parseInt(inputElement.value, 10);
-  return Number.isFinite(pageCount) && pageCount > 0 ? pageCount : 1;
+  return parsePositiveInteger(inputElement.value, 1);
 }
 
 function createSeededRandom(seed) {
@@ -83,6 +132,8 @@ export async function setupApp({ loadConfig, buildUniqueNames, exportPdf }) {
   const prevButton = document.querySelector('#preview-prev-button');
   const nextButton = document.querySelector('#preview-next-button');
   const pageIndicator = document.querySelector('#preview-page-indicator');
+  const pageInput = document.querySelector('#preview-page-input');
+  const jumpButton = document.querySelector('#preview-jump-button');
   const sheetsContainer = document.querySelector('#print-sheets');
   const status = document.querySelector('#status');
 
@@ -91,12 +142,31 @@ export async function setupApp({ loadConfig, buildUniqueNames, exportPdf }) {
   let currentPageIndex = 0;
 
   exportButton.setAttribute('aria-busy', 'false');
-  updatePaginationControls(prevButton, nextButton, pageIndicator, 0, 0);
+  updatePaginationControls(prevButton, nextButton, pageIndicator, pageInput, jumpButton, 0, 0);
 
   function syncRenderedPages() {
     renderPreview(previewElement, headerInput.value, currentPages, currentPageIndex);
+    updatePreviewScale(previewElement);
     renderAllSheets(sheetsContainer, headerInput.value, currentPages);
-    updatePaginationControls(prevButton, nextButton, pageIndicator, currentPageIndex, currentPages.length);
+    updatePaginationControls(
+      prevButton,
+      nextButton,
+      pageIndicator,
+      pageInput,
+      jumpButton,
+      currentPageIndex,
+      currentPages.length
+    );
+  }
+
+  function goToPage(pageNumber) {
+    if (currentPages.length === 0) {
+      return;
+    }
+
+    const nextPageIndex = Math.min(Math.max(pageNumber - 1, 0), currentPages.length - 1);
+    currentPageIndex = nextPageIndex;
+    syncRenderedPages();
   }
 
   try {
@@ -115,6 +185,10 @@ export async function setupApp({ loadConfig, buildUniqueNames, exportPdf }) {
     syncRenderedPages();
   });
 
+  globalThis.addEventListener?.('resize', () => {
+    updatePreviewScale(previewElement);
+  });
+
   generateButton.addEventListener('click', () => {
     try {
       const pageCount = parsePageCount(pageCountInput);
@@ -128,21 +202,23 @@ export async function setupApp({ loadConfig, buildUniqueNames, exportPdf }) {
   });
 
   prevButton?.addEventListener('click', () => {
-    if (currentPageIndex === 0) {
-      return;
-    }
-
-    currentPageIndex -= 1;
-    syncRenderedPages();
+    goToPage(currentPageIndex);
   });
 
   nextButton?.addEventListener('click', () => {
-    if (currentPageIndex >= currentPages.length - 1) {
+    goToPage(currentPageIndex + 2);
+  });
+
+  jumpButton?.addEventListener('click', () => {
+    goToPage(parsePositiveInteger(pageInput?.value, currentPageIndex + 1));
+  });
+
+  pageInput?.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter') {
       return;
     }
 
-    currentPageIndex += 1;
-    syncRenderedPages();
+    goToPage(parsePositiveInteger(pageInput.value, currentPageIndex + 1));
   });
 
   exportButton.addEventListener('click', async () => {
