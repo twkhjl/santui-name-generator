@@ -14,10 +14,10 @@ describe('contact page', () => {
     expect(indexHtml).toContain('聯絡我們');
   });
 
-  it('聯絡我們頁面存在且保留 email placeholder', () => {
+  it('聯絡我們頁面存在且顯示聯絡方式', () => {
     const contactHtml = readProjectFile('contact.html');
 
     expect(contactHtml).toContain('聯絡我們');
-    expect(contactHtml).toContain('your-email@example.com');
+    expect(contactHtml).toContain('Email');
   });
 });
