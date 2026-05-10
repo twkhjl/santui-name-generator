@@ -46,4 +46,26 @@ describe('loadConfig', () => {
     expect(fetchImpl).toHaveBeenCalledTimes(1);
     expect(fetchImpl.mock.calls[0][0]).toMatch(/config\.json$/);
   });
+
+  it('config.json 讀不到時 fallback 到 public/config.json', async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: false })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: vi.fn().mockResolvedValue({
+          defaultHeaderText: '標題',
+          fullNames: [],
+          firstChars: ['王', '李', '陳', '林', '周', '吳', '徐', '黃', '張', '許', '鄭', '何'],
+          secondChars: ['明', '安', '華', '芳', '婷', '潔', '軒', '庭', '萱', '蓉', '雯', '欣'],
+          pdf: { format: 'a4', orientation: 'portrait', marginMm: 10 }
+        })
+      });
+
+    await loadConfig(fetchImpl);
+
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    expect(fetchImpl.mock.calls[0][0]).toMatch(/config\.json$/);
+    expect(fetchImpl.mock.calls[1][0]).toMatch(/public\/config\.json$/);
+  });
 });

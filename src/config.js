@@ -1,5 +1,8 @@
 const REQUIRED_TOTAL = 126;
-const CONFIG_PATH = new URL('./config.json', document.baseURI).href;
+const CONFIG_PATHS = [
+  new URL('./config.json', document.baseURI).href,
+  new URL('./public/config.json', document.baseURI).href
+];
 const TWO_CJK_REGEX = /^[\u4e00-\u9fff]{2}$/u;
 
 function unique(items) {
@@ -37,12 +40,16 @@ export function normalizeConfig(rawConfig) {
 }
 
 export async function loadConfig(fetchImpl = fetch) {
-  const response = await fetchImpl(CONFIG_PATH);
+  for (const path of CONFIG_PATHS) {
+    const response = await fetchImpl(path);
 
-  if (!response.ok) {
-    throw new Error('設定檔讀取失敗');
+    if (!response.ok) {
+      continue;
+    }
+
+    const rawConfig = await response.json();
+    return normalizeConfig(rawConfig);
   }
 
-  const rawConfig = await response.json();
-  return normalizeConfig(rawConfig);
+  throw new Error('設定檔讀取失敗');
 }
