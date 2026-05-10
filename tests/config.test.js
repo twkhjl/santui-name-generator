@@ -43,6 +43,7 @@ describe('loadConfig', () => {
 
     await loadConfig(fetchImpl);
 
-    expect(fetchImpl).toHaveBeenCalledWith('/config.local.json');
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(fetchImpl.mock.calls[0][0]).toMatch(/public\/config\.local\.json$/);
   });
 });

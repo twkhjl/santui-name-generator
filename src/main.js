@@ -1,4 +1,3 @@
-import './styles.css';
 import { loadConfig } from './config.js';
 import { buildUniqueNames } from './name-generator.js';
 import { exportPdf } from './pdf-export.js';

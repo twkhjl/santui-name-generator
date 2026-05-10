@@ -1,5 +1,5 @@
 const REQUIRED_TOTAL = 126;
-const CONFIG_PATH = '/config.local.json';
+const CONFIG_PATH = new URL('./public/config.local.json', document.baseURI).href;
 const TWO_CJK_REGEX = /^[\u4e00-\u9fff]{2}$/u;
 
 function unique(items) {

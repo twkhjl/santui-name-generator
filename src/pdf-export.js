@@ -1,15 +1,14 @@
-import html2canvas from 'html2canvas';
-import { jsPDF } from 'jspdf';
 import { chunkNames, chunkPages, NAMES_PER_PAGE } from './name-generator.js';
 
 const FONT_FILE_NAME = 'kaiu.ttf';
 const FONT_NAME = 'DFKai';
+const FONT_FILE_URL = new URL(`./public/fonts/${FONT_FILE_NAME}`, document.baseURI).href;
 const PAGE_WIDTH_MM = 210;
 const PAGE_HEIGHT_MM = 297;
 const LARGE_EXPORT_PAGE_THRESHOLD = 20;
 
 async function fetchFontBase64(fetchImpl = fetch) {
-  const response = await fetchImpl(`/fonts/${FONT_FILE_NAME}`);
+  const response = await fetchImpl(FONT_FILE_URL);
 
   if (!response.ok) {
     throw new Error('字型載入失敗');
@@ -24,6 +23,17 @@ async function fetchFontBase64(fetchImpl = fetch) {
   }
 
   return btoa(binary);
+}
+
+function getPdfDependencies() {
+  const renderCanvas = globalThis.html2canvas;
+  const jsPdfConstructor = globalThis.jspdf?.jsPDF;
+
+  if (!renderCanvas || !jsPdfConstructor) {
+    throw new Error('PDF 套件載入失敗，請重新整理頁面後再試一次。');
+  }
+
+  return { renderCanvas, jsPdfConstructor };
 }
 
 function drawPage(doc, { headerText, names, margin }) {
@@ -136,9 +146,11 @@ export async function exportPdf(
     throw new Error('請先產生名字');
   }
 
-  const createDocument = dependencies.createDocument ?? ((options) => new jsPDF(options));
+  const globals = dependencies.createDocument && dependencies.renderCanvas ? null : getPdfDependencies();
+  const createDocument =
+    dependencies.createDocument ?? ((options) => new globals.jsPdfConstructor(options));
   const loadFontBase64 = dependencies.loadFontBase64 ?? fetchFontBase64;
-  const renderCanvas = dependencies.renderCanvas ?? html2canvas;
+  const renderCanvas = dependencies.renderCanvas ?? globals.renderCanvas;
   const doc = createDocument({
     format: pdfConfig.format,
     orientation: pdfConfig.orientation,
