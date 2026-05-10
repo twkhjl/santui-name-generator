@@ -1,19 +1,49 @@
 import { chunkNames, NAMES_PER_PAGE } from './name-generator.js';
 
-function createSheet(headerText, names) {
+const CELL_EDIT_REGEX = /[\u4e00-\u9fff]/gu;
+
+function sanitizeEditableName(value) {
+  return (value.match(CELL_EDIT_REGEX) ?? []).join('').slice(0, 3);
+}
+
+function getNameCellClass(name) {
+  return name.length === 3 ? 'name-cell name-cell--compact' : 'name-cell';
+}
+
+function createSheet(headerText, names, { editable = false, pageIndex = 0 } = {}) {
   const rows = chunkNames(names);
+
   return `
     <section class="sheet">
       <p class="header-preview">${headerText}</p>
       <table class="name-table" aria-label="名字預覽表格">
-        ${rows.map((row) => `<tr>${row.map((name) => `<td>${name ?? ''}</td>`).join('')}</tr>`).join('')}
+        ${rows
+          .map(
+            (row, rowIndex) => `
+              <tr>
+                ${row
+                  .map((name, columnIndex) => {
+                    const flatIndex = rowIndex * 9 + columnIndex;
+                    const classes = getNameCellClass(name ?? '');
+                    const editableAttrs = editable
+                      ? ` data-page-index="${pageIndex}" data-name-index="${flatIndex}" tabindex="0"`
+                      : '';
+                    return `<td class="${classes}"${editableAttrs}>${name ?? ''}</td>`;
+                  })
+                  .join('')}
+              </tr>
+            `
+          )
+          .join('')}
       </table>
     </section>
   `;
 }
 
 function renderAllSheets(containerElement, headerText, pages) {
-  containerElement.innerHTML = pages.map((pageNames) => createSheet(headerText, pageNames)).join('');
+  containerElement.innerHTML = pages
+    .map((pageNames, pageIndex) => createSheet(headerText, pageNames, { pageIndex }))
+    .join('');
 }
 
 function renderPreview(previewElement, headerText, pages, pageIndex) {
@@ -22,31 +52,16 @@ function renderPreview(previewElement, headerText, pages, pageIndex) {
   }
 
   const currentPage = pages[pageIndex] ?? [];
-  previewElement.innerHTML = currentPage.length > 0 ? createSheet(headerText, currentPage) : '';
+  previewElement.innerHTML =
+    currentPage.length > 0 ? createSheet(headerText, currentPage, { editable: true, pageIndex }) : '';
 }
 
-function updatePreviewScale(previewElement) {
-  if (!previewElement) {
-    return;
-  }
-
-  const previewSheet = previewElement.querySelector('.sheet');
-
-  if (!previewSheet) {
-    previewElement.style.setProperty('--preview-scale', '1');
-    return;
-  }
-
-  const frameWidth = previewElement.clientWidth;
-  const naturalWidth = previewSheet.offsetWidth;
-
-  if (!frameWidth || !naturalWidth) {
-    previewElement.style.setProperty('--preview-scale', '1');
-    return;
-  }
-
-  const scale = Math.min(frameWidth / naturalWidth, 1);
-  previewElement.style.setProperty('--preview-scale', String(scale));
+function buildPageOptions(totalPages, currentPageNumber) {
+  return Array.from({ length: totalPages }, (_, index) => {
+    const pageNumber = index + 1;
+    const selected = pageNumber === currentPageNumber ? ' selected' : '';
+    return `<option value="${pageNumber}"${selected}>第 ${pageNumber} 頁</option>`;
+  }).join('');
 }
 
 function updatePaginationControls(
@@ -58,19 +73,18 @@ function updatePaginationControls(
   currentPageIndex,
   totalPages
 ) {
-  const displayPage = totalPages === 0 ? 0 : currentPageIndex + 1;
+  const currentPageNumber = totalPages === 0 ? 0 : currentPageIndex + 1;
 
   if (indicator) {
-    indicator.textContent = `${displayPage} / ${totalPages}`;
+    indicator.textContent = `${currentPageNumber} / ${totalPages}`;
   }
 
   if (pageSelect) {
-    pageSelect.innerHTML = Array.from({ length: totalPages }, (_, index) => {
-      const pageNumber = index + 1;
-      const selected = pageNumber === displayPage ? ' selected' : '';
-      return `<option value="${pageNumber}"${selected}>第 ${pageNumber} 頁</option>`;
-    }).join('');
+    pageSelect.innerHTML = buildPageOptions(totalPages, currentPageNumber);
     pageSelect.disabled = totalPages <= 1;
+    if (totalPages > 0) {
+      pageSelect.value = String(currentPageNumber);
+    }
   }
 
   if (jumpButton) {
@@ -125,6 +139,22 @@ function setExportLoadingState(exportButton, status, isLoading) {
   }
 }
 
+function createNameEditor(cell, name) {
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.value = name;
+  input.maxLength = 3;
+  input.className = 'name-editor';
+  input.setAttribute('data-name-editor', 'true');
+  input.setAttribute('inputmode', 'text');
+  input.setAttribute('aria-label', '編輯名字');
+  cell.textContent = '';
+  cell.append(input);
+  input.focus();
+  input.select();
+  return input;
+}
+
 export async function setupApp({ loadConfig, buildUniqueNames, exportPdf }) {
   const headerInput = document.querySelector('#header-input');
   const pageCountInput = document.querySelector('#page-count-input');
@@ -148,7 +178,6 @@ export async function setupApp({ loadConfig, buildUniqueNames, exportPdf }) {
 
   function syncRenderedPages() {
     renderPreview(previewElement, headerInput.value, currentPages, currentPageIndex);
-    updatePreviewScale(previewElement);
     renderAllSheets(sheetsContainer, headerInput.value, currentPages);
     updatePaginationControls(
       prevButton,
@@ -166,8 +195,20 @@ export async function setupApp({ loadConfig, buildUniqueNames, exportPdf }) {
       return;
     }
 
-    const nextPageIndex = Math.min(Math.max(pageNumber - 1, 0), currentPages.length - 1);
-    currentPageIndex = nextPageIndex;
+    currentPageIndex = Math.min(Math.max(pageNumber - 1, 0), currentPages.length - 1);
+    syncRenderedPages();
+  }
+
+  function saveEditedName(pageIndex, nameIndex, nextValue) {
+    const currentValue = currentPages[pageIndex]?.[nameIndex] ?? '';
+    const sanitized = sanitizeEditableName(nextValue);
+
+    if (!sanitized) {
+      syncRenderedPages();
+      return;
+    }
+
+    currentPages[pageIndex][nameIndex] = sanitized || currentValue;
     syncRenderedPages();
   }
 
@@ -185,10 +226,6 @@ export async function setupApp({ loadConfig, buildUniqueNames, exportPdf }) {
 
   headerInput.addEventListener('input', () => {
     syncRenderedPages();
-  });
-
-  globalThis.addEventListener?.('resize', () => {
-    updatePreviewScale(previewElement);
   });
 
   generateButton.addEventListener('click', () => {
@@ -213,6 +250,35 @@ export async function setupApp({ loadConfig, buildUniqueNames, exportPdf }) {
 
   jumpButton?.addEventListener('click', () => {
     goToPage(parsePositiveInteger(pageSelect?.value, currentPageIndex + 1));
+  });
+
+  previewElement?.addEventListener('click', (event) => {
+    const cell = event.target.closest('td[data-page-index][data-name-index]');
+    if (!cell || cell.querySelector('input[data-name-editor="true"]')) {
+      return;
+    }
+
+    const pageIndex = Number.parseInt(cell.dataset.pageIndex, 10);
+    const nameIndex = Number.parseInt(cell.dataset.nameIndex, 10);
+    const originalName = currentPages[pageIndex]?.[nameIndex] ?? '';
+    const input = createNameEditor(cell, originalName);
+
+    const commit = () => {
+      saveEditedName(pageIndex, nameIndex, input.value);
+    };
+
+    input.addEventListener('keydown', (keyboardEvent) => {
+      if (keyboardEvent.key === 'Enter') {
+        keyboardEvent.preventDefault();
+        commit();
+      }
+
+      if (keyboardEvent.key === 'Escape') {
+        syncRenderedPages();
+      }
+    });
+
+    input.addEventListener('blur', commit, { once: true });
   });
 
   exportButton.addEventListener('click', async () => {

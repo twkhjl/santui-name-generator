@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { setupApp } from '../src/dom.js';
 
+function buildNames(prefix = '測') {
+  return Array.from({ length: 126 }, (_, index) => `${prefix}${String(index).padStart(3, '0')}`);
+}
+
 describe('setupApp', () => {
   beforeEach(() => {
     document.body.innerHTML = `
@@ -22,7 +26,7 @@ describe('setupApp', () => {
   it('載入後帶入預設標題，按產生後渲染單頁預覽與完整匯出內容', async () => {
     const loadConfig = vi.fn().mockResolvedValue({
       defaultHeaderText: '測試標題',
-      fullNames: Array.from({ length: 126 }, (_, index) => `測${String(index).padStart(3, '0')}`),
+      fullNames: buildNames('甲'),
       firstChars: [],
       secondChars: [],
       invalidFullNameCount: 0,
@@ -47,7 +51,7 @@ describe('setupApp', () => {
   });
 
   it('多頁時預覽只顯示目前頁，完整頁面仍保留給匯出', async () => {
-    const pageNames = Array.from({ length: 126 }, (_, index) => `甲${String(index).padStart(3, '0')}`);
+    const pageNames = buildNames('甲');
     const loadConfig = vi.fn().mockResolvedValue({
       defaultHeaderText: '測試標題',
       fullNames: pageNames,
@@ -93,7 +97,7 @@ describe('setupApp', () => {
   });
 
   it('匯出時傳入完整預覽容器而不是只有當前分頁', async () => {
-    const pageNames = Array.from({ length: 126 }, (_, index) => `測${String(index).padStart(3, '0')}`);
+    const pageNames = buildNames('甲');
     const loadConfig = vi.fn().mockResolvedValue({
       defaultHeaderText: '測試標題',
       fullNames: pageNames,
@@ -121,7 +125,7 @@ describe('setupApp', () => {
   });
 
   it('匯出 PDF 時顯示 loading，完成後恢復按鈕狀態', async () => {
-    const pageNames = Array.from({ length: 126 }, (_, index) => `測${String(index).padStart(3, '0')}`);
+    const pageNames = buildNames('甲');
     const loadConfig = vi.fn().mockResolvedValue({
       defaultHeaderText: '測試標題',
       fullNames: pageNames,
@@ -159,9 +163,7 @@ describe('setupApp', () => {
   });
 
   it('預覽可切換上一頁下一頁，使用者不必一直往下捲', async () => {
-    const allNames = Array.from({ length: 126 }, (_, index) => `A${String(index).padStart(3, '0')}`).concat(
-      Array.from({ length: 126 }, (_, index) => `B${String(index).padStart(3, '0')}`)
-    );
+    const allNames = buildNames('A').concat(buildNames('B'));
     const loadConfig = vi.fn().mockResolvedValue({
       defaultHeaderText: '測試標題',
       fullNames: allNames.slice(0, 126),
@@ -192,9 +194,7 @@ describe('setupApp', () => {
   });
 
   it('可使用下拉選單跳轉到指定頁', async () => {
-    const pages = ['A', 'B', 'C'].flatMap((prefix) =>
-      Array.from({ length: 126 }, (_, index) => `${prefix}${String(index).padStart(3, '0')}`)
-    );
+    const pages = buildNames('A').concat(buildNames('B'), buildNames('C'));
     const loadConfig = vi.fn().mockResolvedValue({
       defaultHeaderText: '測試標題',
       fullNames: pages.slice(0, 126),
@@ -219,5 +219,61 @@ describe('setupApp', () => {
     expect(document.querySelector('#preview-page-indicator').textContent).toBe('3 / 3');
     expect(document.querySelector('#preview-sheet').textContent).toContain('C000');
     expect(document.querySelector('#preview-next-button').disabled).toBe(true);
+  });
+
+  it('點名字可編輯，儲存後同步更新預覽與匯出內容', async () => {
+    const pageNames = buildNames('甲');
+    const loadConfig = vi.fn().mockResolvedValue({
+      defaultHeaderText: '測試標題',
+      fullNames: pageNames,
+      firstChars: [],
+      secondChars: [],
+      invalidFullNameCount: 0,
+      pdf: { format: 'a4', orientation: 'portrait', marginMm: 10 }
+    });
+
+    await setupApp({
+      loadConfig,
+      buildUniqueNames: vi.fn(() => pageNames),
+      exportPdf: vi.fn()
+    });
+    document.querySelector('#generate-button').click();
+
+    const firstCell = document.querySelector('#preview-sheet td');
+    firstCell.click();
+    const editor = document.querySelector('#preview-sheet input[data-name-editor="true"]');
+    editor.value = '王小明';
+    editor.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+
+    expect(document.querySelector('#preview-sheet td').textContent).toBe('王小明');
+    expect(document.querySelector('#print-sheets td').textContent).toBe('王小明');
+  });
+
+  it('三個中文字會自動縮小，超過三字只保留前三個中文字', async () => {
+    const pageNames = buildNames('甲');
+    const loadConfig = vi.fn().mockResolvedValue({
+      defaultHeaderText: '測試標題',
+      fullNames: pageNames,
+      firstChars: [],
+      secondChars: [],
+      invalidFullNameCount: 0,
+      pdf: { format: 'a4', orientation: 'portrait', marginMm: 10 }
+    });
+
+    await setupApp({
+      loadConfig,
+      buildUniqueNames: vi.fn(() => pageNames),
+      exportPdf: vi.fn()
+    });
+    document.querySelector('#generate-button').click();
+
+    document.querySelector('#preview-sheet td').click();
+    const editor = document.querySelector('#preview-sheet input[data-name-editor="true"]');
+    editor.value = '王小明天A';
+    editor.dispatchEvent(new Event('blur', { bubbles: true }));
+
+    const previewCell = document.querySelector('#preview-sheet td');
+    expect(previewCell.textContent).toBe('王小明');
+    expect(previewCell.classList.contains('name-cell--compact')).toBe(true);
   });
 });
