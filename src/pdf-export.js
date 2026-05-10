@@ -1,7 +1,11 @@
 import { chunkNames, chunkPages, NAMES_PER_PAGE } from './name-generator.js';
 
-const FONT_FILE_NAME = 'NotoSansTC-ExtraBold.ttf';
-const FONT_NAME = 'NotoSansTCExtraBold';
+// const FONT_FILE_NAME = 'NotoSansTC-ExtraBold.ttf';
+// const FONT_NAME = 'NotoSansTCExtraBold';
+
+const FONT_FILE_NAME = 'TW-Kai-98_1.ttf';
+const FONT_NAME = 'TWKai';
+
 const FONT_FILE_URLS = [
   new URL(`./fonts/${FONT_FILE_NAME}`, document.baseURI).href,
   new URL(`./public/fonts/${FONT_FILE_NAME}`, document.baseURI).href
