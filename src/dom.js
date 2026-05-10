@@ -142,23 +142,18 @@ function buildPageOptions(totalPages, currentPageNumber) {
   return Array.from({ length: totalPages }, (_, index) => {
     const pageNumber = index + 1;
     const selected = pageNumber === currentPageNumber ? ' selected' : '';
-    return `<option value="${pageNumber}"${selected}>第 ${pageNumber} 頁</option>`;
+    return `<option value="${pageNumber}"${selected}>${pageNumber}</option>`;
   }).join('');
 }
 
 function updatePaginationControls(
   prevButton,
   nextButton,
-  indicator,
   pageSelect,
   currentPageIndex,
   totalPages
 ) {
   const currentPageNumber = totalPages === 0 ? 0 : currentPageIndex + 1;
-
-  if (indicator) {
-    indicator.textContent = `${currentPageNumber} / ${totalPages}`;
-  }
 
   if (pageSelect) {
     pageSelect.innerHTML = buildPageOptions(totalPages, currentPageNumber);
@@ -224,7 +219,6 @@ export async function setupApp({ loadConfig, buildUniqueNames, exportPdf }) {
   const previewElement = document.querySelector('#preview-sheet');
   const prevButton = document.querySelector('#preview-prev-button');
   const nextButton = document.querySelector('#preview-next-button');
-  const pageIndicator = document.querySelector('#preview-page-indicator');
   const pageSelect = document.querySelector('#preview-page-select');
   const editorPanel = document.querySelector('#name-editor-panel');
   const sheetsContainer = document.querySelector('#print-sheets');
@@ -237,19 +231,12 @@ export async function setupApp({ loadConfig, buildUniqueNames, exportPdf }) {
   let editingState = null;
 
   exportButton.setAttribute('aria-busy', 'false');
-  updatePaginationControls(prevButton, nextButton, pageIndicator, pageSelect, 0, 0);
+  updatePaginationControls(prevButton, nextButton, pageSelect, 0, 0);
 
   function syncRenderedPages() {
     renderPreview(previewElement, headerInput.value, currentPages, currentPageIndex, editingState);
     renderAllSheets(sheetsContainer, headerInput.value, currentPages);
-    updatePaginationControls(
-      prevButton,
-      nextButton,
-      pageIndicator,
-      pageSelect,
-      currentPageIndex,
-      currentPages.length
-    );
+    updatePaginationControls(prevButton, nextButton, pageSelect, currentPageIndex, currentPages.length);
     renderEditorPanel(
       editorPanel,
       editingState,

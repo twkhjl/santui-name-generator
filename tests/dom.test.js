@@ -14,7 +14,6 @@ describe('setupApp', () => {
       <button id="export-button" type="button">匯出 PDF</button>
       <button id="preview-prev-button" type="button">上一頁</button>
       <select id="preview-page-select"></select>
-      <span id="preview-page-indicator"></span>
       <button id="preview-next-button" type="button">下一頁</button>
       <section id="name-editor-panel"></section>
       <p id="status"></p>
@@ -41,9 +40,9 @@ describe('setupApp', () => {
     expect(document.querySelector('#header-input').value).toBe('測試標題');
     expect(document.querySelectorAll('#preview-sheet td')).toHaveLength(126);
     expect(document.querySelectorAll('#print-sheets td')).toHaveLength(126);
-    expect(document.querySelector('#preview-page-indicator').textContent).toBe('1 / 1');
     expect(document.querySelector('#preview-page-select').value).toBe('1');
     expect(document.querySelectorAll('#preview-page-select option')).toHaveLength(1);
+    expect(document.querySelector('#preview-page-select option').textContent).toBe('1');
     expect(document.querySelector('#preview-prev-button').disabled).toBe(true);
     expect(document.querySelector('#preview-next-button').disabled).toBe(true);
     expect(document.querySelector('.header-preview').textContent).toBe('測試標題');
@@ -69,9 +68,9 @@ describe('setupApp', () => {
     expect(buildUniqueNames).toHaveBeenCalledTimes(2);
     expect(document.querySelectorAll('#preview-sheet .sheet')).toHaveLength(1);
     expect(document.querySelectorAll('#print-sheets .sheet')).toHaveLength(2);
-    expect(document.querySelector('#preview-page-indicator').textContent).toBe('1 / 2');
     expect(document.querySelector('#preview-page-select').value).toBe('1');
     expect(document.querySelectorAll('#preview-page-select option')).toHaveLength(2);
+    expect(document.querySelectorAll('#preview-page-select option')[1].textContent).toBe('2');
     expect(document.querySelector('#preview-prev-button').disabled).toBe(true);
     expect(document.querySelector('#preview-next-button').disabled).toBe(false);
     expect(document.querySelectorAll('#print-sheets td')).toHaveLength(252);
@@ -183,7 +182,6 @@ describe('setupApp', () => {
 
     document.querySelector('#preview-next-button').click();
 
-    expect(document.querySelector('#preview-page-indicator').textContent).toBe('2 / 2');
     expect(document.querySelector('#preview-page-select').value).toBe('2');
     expect(document.querySelector('#preview-sheet').textContent).toContain('B000');
     expect(document.querySelector('#preview-prev-button').disabled).toBe(false);
@@ -214,7 +212,6 @@ describe('setupApp', () => {
     pageSelect.value = '3';
     pageSelect.dispatchEvent(new Event('change', { bubbles: true }));
 
-    expect(document.querySelector('#preview-page-indicator').textContent).toBe('3 / 3');
     expect(document.querySelector('#preview-sheet').textContent).toContain('C000');
     expect(document.querySelector('#preview-next-button').disabled).toBe(true);
   });
