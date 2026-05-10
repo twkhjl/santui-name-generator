@@ -138,4 +138,40 @@ describe('exportPdf', () => {
       useCORS: true
     });
   });
+
+  it('大量頁數時改走文字模式匯出', async () => {
+    document.body.innerHTML = `<section id="print-sheets">${
+      Array.from({ length: 100 }, () => '<section class="sheet"></section>').join('')
+    }</section>`;
+    const doc = createDocMock();
+    const renderCanvas = vi.fn();
+    const loadFontBase64 = vi.fn().mockResolvedValue('fake-font');
+
+    await exportPdf(
+      {
+        headerText: '標題',
+        names: Array.from({ length: 12600 }, (_, index) => `名${String(index).padStart(4, '0')}`),
+        pdfConfig: { format: 'a4', orientation: 'portrait', marginMm: 10 },
+        sourceElement: document.querySelector('#print-sheets')
+      },
+      {
+        createDocument: vi.fn(() => doc),
+        renderCanvas,
+        loadFontBase64
+      }
+    );
+
+    expect(renderCanvas).not.toHaveBeenCalled();
+    expect(loadFontBase64).toHaveBeenCalledTimes(1);
+    expect(doc.addFileToVFS).toHaveBeenCalledWith('NotoSansTC-ExtraBold.ttf', 'fake-font');
+    expect(doc.addFont).toHaveBeenCalledWith(
+      'NotoSansTC-ExtraBold.ttf',
+      'NotoSansTCExtraBold',
+      'normal'
+    );
+    expect(doc.setFont).toHaveBeenCalledWith('NotoSansTCExtraBold', 'normal');
+    expect(doc.addImage).not.toHaveBeenCalled();
+    expect(doc.addPage).toHaveBeenCalledTimes(99);
+    expect(doc.save).toHaveBeenCalledWith('name-generator.pdf');
+  });
 });

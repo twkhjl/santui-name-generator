@@ -1,28 +1,36 @@
 import { chunkNames, chunkPages, NAMES_PER_PAGE } from './name-generator.js';
 
-const FONT_FILE_NAME = 'kaiu.ttf';
-const FONT_NAME = 'DFKai';
-const FONT_FILE_URL = new URL(`./public/fonts/${FONT_FILE_NAME}`, document.baseURI).href;
+const FONT_FILE_NAME = 'NotoSansTC-ExtraBold.ttf';
+const FONT_NAME = 'NotoSansTCExtraBold';
+const FONT_FILE_URLS = [
+  new URL(`./fonts/${FONT_FILE_NAME}`, document.baseURI).href,
+  new URL(`./public/fonts/${FONT_FILE_NAME}`, document.baseURI).href
+];
 const PAGE_WIDTH_MM = 210;
 const PAGE_HEIGHT_MM = 297;
 const LARGE_EXPORT_PAGE_THRESHOLD = 20;
+const FAST_TEXT_EXPORT_PAGE_THRESHOLD = 80;
 
 async function fetchFontBase64(fetchImpl = fetch) {
-  const response = await fetchImpl(FONT_FILE_URL);
+  for (const fontUrl of FONT_FILE_URLS) {
+    const response = await fetchImpl(fontUrl);
 
-  if (!response.ok) {
-    throw new Error('字型載入失敗');
+    if (!response.ok) {
+      continue;
+    }
+
+    const buffer = await response.arrayBuffer();
+    let binary = '';
+    const bytes = new Uint8Array(buffer);
+
+    for (const byte of bytes) {
+      binary += String.fromCharCode(byte);
+    }
+
+    return btoa(binary);
   }
 
-  const buffer = await response.arrayBuffer();
-  let binary = '';
-  const bytes = new Uint8Array(buffer);
-
-  for (const byte of bytes) {
-    binary += String.fromCharCode(byte);
-  }
-
-  return btoa(binary);
+  throw new Error('字型載入失敗');
 }
 
 function getPdfDependencies() {
@@ -43,8 +51,8 @@ function drawPage(doc, { headerText, names, margin }) {
   const startY = margin + 18;
   const cellHeight = 18;
 
-  doc.setFontSize(18);
-  doc.text(headerText, PAGE_WIDTH_MM / 2, margin + 8, { align: 'center', maxWidth: usableWidth });
+  doc.setFontSize(12);
+  doc.text(headerText, PAGE_WIDTH_MM / 2, margin, { align: 'center', maxWidth: usableWidth });
   doc.setFontSize(18);
 
   rows.forEach((row, rowIndex) => {
@@ -71,6 +79,10 @@ function drawPage(doc, { headerText, names, margin }) {
 
 function getRenderScale(pageCount) {
   return pageCount > LARGE_EXPORT_PAGE_THRESHOLD ? 1 : 2;
+}
+
+function shouldUseTextFallback(pageCount, sourceElement) {
+  return !sourceElement || pageCount >= FAST_TEXT_EXPORT_PAGE_THRESHOLD;
 }
 
 function releaseCanvas(canvas) {
@@ -146,6 +158,8 @@ export async function exportPdf(
     throw new Error('請先產生名字');
   }
 
+  const pageCount = names.length / NAMES_PER_PAGE;
+
   const globals = dependencies.createDocument && dependencies.renderCanvas ? null : getPdfDependencies();
   const createDocument =
     dependencies.createDocument ?? ((options) => new globals.jsPdfConstructor(options));
@@ -157,11 +171,7 @@ export async function exportPdf(
     unit: 'mm'
   });
 
-  if (sourceElement) {
-    await exportPreviewSheets(doc, sourceElement, renderCanvas);
-  } else {
-    await exportTextFallback(doc, { headerText, names, pdfConfig }, loadFontBase64);
-  }
+  await exportTextFallback(doc, { headerText, names, pdfConfig }, loadFontBase64);
 
   doc.save('name-generator.pdf');
 }
