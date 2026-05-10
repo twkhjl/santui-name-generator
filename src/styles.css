@@ -36,15 +36,44 @@ button {
   font: inherit;
 }
 
+button {
+  position: relative;
+}
+
 .actions {
   display: flex;
   gap: 12px;
+}
+
+#export-button.is-loading {
+  cursor: progress;
+  padding-right: 2.6rem;
+}
+
+#export-button.is-loading::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 1rem;
+  width: 1rem;
+  height: 1rem;
+  margin-top: -0.5rem;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 999px;
+  animation: spin 0.8s linear infinite;
 }
 
 .status {
   min-height: 24px;
   margin: 0;
   color: #b91c1c;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .sheets {

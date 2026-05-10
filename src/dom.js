@@ -43,6 +43,16 @@ function buildNamesForPages(config, pageCount, buildUniqueNames) {
   ).flat();
 }
 
+function setExportLoadingState(exportButton, status, isLoading) {
+  exportButton.disabled = isLoading;
+  exportButton.setAttribute('aria-busy', String(isLoading));
+  exportButton.classList.toggle('is-loading', isLoading);
+
+  if (isLoading) {
+    status.textContent = 'PDF 匯出中...';
+  }
+}
+
 export async function setupApp({ loadConfig, buildUniqueNames, exportPdf }) {
   const headerInput = document.querySelector('#header-input');
   const pageCountInput = document.querySelector('#page-count-input');
@@ -53,6 +63,7 @@ export async function setupApp({ loadConfig, buildUniqueNames, exportPdf }) {
 
   let config;
   let currentNames = [];
+  exportButton.setAttribute('aria-busy', 'false');
 
   try {
     config = await loadConfig();
@@ -89,11 +100,22 @@ export async function setupApp({ loadConfig, buildUniqueNames, exportPdf }) {
       return;
     }
 
-    await exportPdf({
-      headerText: headerInput.value,
-      names: currentNames,
-      pdfConfig: config.pdf,
-      sourceElement: sheetsContainer
-    });
+    try {
+      setExportLoadingState(exportButton, status, true);
+      await exportPdf({
+        headerText: headerInput.value,
+        names: currentNames,
+        pdfConfig: config.pdf,
+        sourceElement: sheetsContainer
+      });
+    } catch (error) {
+      status.textContent = error.message;
+    } finally {
+      if (status.textContent === 'PDF 匯出中...') {
+        status.textContent = '';
+      }
+
+      setExportLoadingState(exportButton, status, false);
+    }
   });
 }

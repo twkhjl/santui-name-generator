@@ -105,4 +105,41 @@ describe('setupApp', () => {
       sourceElement: document.querySelector('#print-sheets')
     });
   });
+  it('匯出 PDF 時顯示 loading，完成後恢復按鈕狀態', async () => {
+    const pageNames = Array.from({ length: 126 }, (_, index) => `??{String(index).padStart(3, '0')}`);
+    const loadConfig = vi.fn().mockResolvedValue({
+      defaultHeaderText: '?身璅?',
+      fullNames: pageNames,
+      firstChars: [],
+      secondChars: [],
+      invalidFullNameCount: 0,
+      pdf: { format: 'a4', orientation: 'portrait', marginMm: 10 }
+    });
+    let resolveExport;
+    const exportPdf = vi.fn(
+      () =>
+        new Promise((resolve) => {
+          resolveExport = resolve;
+        })
+    );
+
+    await setupApp({
+      loadConfig,
+      buildUniqueNames: vi.fn(() => pageNames),
+      exportPdf
+    });
+    document.querySelector('#generate-button').click();
+    document.querySelector('#export-button').click();
+
+    expect(document.querySelector('#export-button').disabled).toBe(true);
+    expect(document.querySelector('#export-button').getAttribute('aria-busy')).toBe('true');
+    expect(document.querySelector('#status').textContent).toBe('PDF 匯出中...');
+
+    resolveExport();
+    await Promise.resolve();
+
+    expect(document.querySelector('#export-button').disabled).toBe(false);
+    expect(document.querySelector('#export-button').getAttribute('aria-busy')).toBe('false');
+    expect(document.querySelector('#status').textContent).toBe('');
+  });
 });
