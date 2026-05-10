@@ -16,6 +16,17 @@
     <script type="module" src="./src/main.js"></script>
   </head>
   <body>
+    <div id="export-loader" class="export-loader" aria-hidden="true">
+      <div class="export-loader__panel" role="status" aria-live="polite">
+        <div class="export-loader__seal" aria-hidden="true">
+          <span class="export-loader__ring export-loader__ring--outer"></span>
+          <span class="export-loader__ring export-loader__ring--inner"></span>
+        </div>
+        <p class="export-loader__title">PDF 匯出中</p>
+        <p class="export-loader__text">請稍候，正在整理頁面與字型。</p>
+      </div>
+    </div>
+
     <header class="site-header">
       <div class="site-header__inner">
         <a class="site-brand" href="./index.html">三退化名產生器</a>

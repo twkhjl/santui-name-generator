@@ -17,6 +17,7 @@ describe('setupApp', () => {
       <button id="preview-next-button" type="button">下一頁</button>
       <section id="name-editor-panel"></section>
       <p id="status"></p>
+      <div id="export-loader" aria-hidden="true"></div>
       <section id="preview-sheet"></section>
       <section id="print-sheets"></section>
     `;
@@ -151,6 +152,8 @@ describe('setupApp', () => {
 
     expect(document.querySelector('#export-button').disabled).toBe(true);
     expect(document.querySelector('#export-button').getAttribute('aria-busy')).toBe('true');
+    expect(document.querySelector('#export-loader').classList.contains('is-visible')).toBe(true);
+    expect(document.querySelector('#export-loader').getAttribute('aria-hidden')).toBe('false');
     expect(document.querySelector('#status').textContent).toBe('PDF 匯出中...');
 
     resolveExport();
@@ -158,6 +161,8 @@ describe('setupApp', () => {
 
     expect(document.querySelector('#export-button').disabled).toBe(false);
     expect(document.querySelector('#export-button').getAttribute('aria-busy')).toBe('false');
+    expect(document.querySelector('#export-loader').classList.contains('is-visible')).toBe(false);
+    expect(document.querySelector('#export-loader').getAttribute('aria-hidden')).toBe('true');
     expect(document.querySelector('#status').textContent).toBe('');
   });
 

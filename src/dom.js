@@ -1,6 +1,7 @@
 import { chunkNames, NAMES_PER_PAGE } from './name-generator.js';
 
 const CELL_EDIT_REGEX = /[\u4e00-\u9fff]/gu;
+const EXPORT_LOADING_MESSAGE = 'PDF 匯出中...';
 
 function sanitizeEditableName(value) {
   return (value.match(CELL_EDIT_REGEX) ?? []).join('').slice(0, 3);
@@ -201,13 +202,16 @@ function buildNamesForPages(config, pageCount, buildUniqueNames) {
   );
 }
 
-function setExportLoadingState(exportButton, status, isLoading) {
+function setExportLoadingState(exportButton, status, loaderElement, isLoading) {
   exportButton.disabled = isLoading;
   exportButton.setAttribute('aria-busy', String(isLoading));
   exportButton.classList.toggle('is-loading', isLoading);
+  loaderElement?.classList.toggle('is-visible', isLoading);
+  loaderElement?.setAttribute('aria-hidden', String(!isLoading));
+  document.body.classList.toggle('is-exporting', isLoading);
 
   if (isLoading) {
-    status.textContent = 'PDF 匯出中...';
+    status.textContent = EXPORT_LOADING_MESSAGE;
   }
 }
 
@@ -223,6 +227,7 @@ export async function setupApp({ loadConfig, buildUniqueNames, exportPdf }) {
   const editorPanel = document.querySelector('#name-editor-panel');
   const sheetsContainer = document.querySelector('#print-sheets');
   const status = document.querySelector('#status');
+  const exportLoader = document.querySelector('#export-loader');
 
   let config;
   let currentPages = [];
@@ -347,7 +352,7 @@ export async function setupApp({ loadConfig, buildUniqueNames, exportPdf }) {
     }
 
     try {
-      setExportLoadingState(exportButton, status, true);
+      setExportLoadingState(exportButton, status, exportLoader, true);
       await exportPdf({
         headerText: headerInput.value,
         names: currentPages.flat(),
@@ -357,11 +362,11 @@ export async function setupApp({ loadConfig, buildUniqueNames, exportPdf }) {
     } catch (error) {
       status.textContent = error.message;
     } finally {
-      if (status.textContent === 'PDF 匯出中...') {
+      if (status.textContent === EXPORT_LOADING_MESSAGE) {
         status.textContent = '';
       }
 
-      setExportLoadingState(exportButton, status, false);
+      setExportLoadingState(exportButton, status, exportLoader, false);
     }
   });
 }
