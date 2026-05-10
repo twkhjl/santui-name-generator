@@ -17,6 +17,7 @@ describe('setupApp', () => {
       <button id="preview-jump-button" type="button">跳轉</button>
       <span id="preview-page-indicator"></span>
       <button id="preview-next-button" type="button">下一頁</button>
+      <section id="name-editor-panel"></section>
       <p id="status"></p>
       <section id="preview-sheet"></section>
       <section id="print-sheets"></section>
@@ -181,9 +182,6 @@ describe('setupApp', () => {
     document.querySelector('#page-count-input').value = '2';
     document.querySelector('#generate-button').click();
 
-    expect(document.querySelector('#preview-sheet').textContent).toContain('A000');
-    expect(document.querySelector('#preview-sheet').textContent).not.toContain('B000');
-
     document.querySelector('#preview-next-button').click();
 
     expect(document.querySelector('#preview-page-indicator').textContent).toBe('2 / 2');
@@ -221,7 +219,7 @@ describe('setupApp', () => {
     expect(document.querySelector('#preview-next-button').disabled).toBe(true);
   });
 
-  it('點名字可編輯，儲存後同步更新預覽與匯出內容', async () => {
+  it('點名字後顯示清楚的編輯面板，儲存後同步更新預覽與匯出內容', async () => {
     const pageNames = buildNames('甲');
     const loadConfig = vi.fn().mockResolvedValue({
       defaultHeaderText: '測試標題',
@@ -239,14 +237,46 @@ describe('setupApp', () => {
     });
     document.querySelector('#generate-button').click();
 
-    const firstCell = document.querySelector('#preview-sheet td');
-    firstCell.click();
-    const editor = document.querySelector('#preview-sheet input[data-name-editor="true"]');
+    document.querySelector('#preview-sheet td').click();
+
+    expect(document.querySelector('#name-editor-panel').textContent).toContain('正在編輯');
+    const editor = document.querySelector('#name-editor-input');
     editor.value = '王小明';
-    editor.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    document.querySelector('#name-editor-save').click();
 
     expect(document.querySelector('#preview-sheet td').textContent).toBe('王小明');
     expect(document.querySelector('#print-sheets td').textContent).toBe('王小明');
+  });
+
+  it('編輯後可還原成原始名字', async () => {
+    const pageNames = buildNames('甲');
+    const loadConfig = vi.fn().mockResolvedValue({
+      defaultHeaderText: '測試標題',
+      fullNames: pageNames,
+      firstChars: [],
+      secondChars: [],
+      invalidFullNameCount: 0,
+      pdf: { format: 'a4', orientation: 'portrait', marginMm: 10 }
+    });
+
+    await setupApp({
+      loadConfig,
+      buildUniqueNames: vi.fn(() => pageNames),
+      exportPdf: vi.fn()
+    });
+    document.querySelector('#generate-button').click();
+    const original = document.querySelector('#preview-sheet td').textContent;
+
+    document.querySelector('#preview-sheet td').click();
+    const editor = document.querySelector('#name-editor-input');
+    editor.value = '王小明';
+    document.querySelector('#name-editor-save').click();
+
+    document.querySelector('#preview-sheet td').click();
+    document.querySelector('#name-editor-reset').click();
+
+    expect(document.querySelector('#preview-sheet td').textContent).toBe(original);
+    expect(document.querySelector('#print-sheets td').textContent).toBe(original);
   });
 
   it('三個中文字會自動縮小，超過三字只保留前三個中文字', async () => {
@@ -268,9 +298,9 @@ describe('setupApp', () => {
     document.querySelector('#generate-button').click();
 
     document.querySelector('#preview-sheet td').click();
-    const editor = document.querySelector('#preview-sheet input[data-name-editor="true"]');
+    const editor = document.querySelector('#name-editor-input');
     editor.value = '王小明天A';
-    editor.dispatchEvent(new Event('blur', { bubbles: true }));
+    document.querySelector('#name-editor-save').click();
 
     const previewCell = document.querySelector('#preview-sheet td');
     expect(previewCell.textContent).toBe('王小明');

@@ -6,11 +6,22 @@ function sanitizeEditableName(value) {
   return (value.match(CELL_EDIT_REGEX) ?? []).join('').slice(0, 3);
 }
 
-function getNameCellClass(name) {
-  return name.length === 3 ? 'name-cell name-cell--compact' : 'name-cell';
+function getNameCellClass(name, isEditing) {
+  const classes = ['name-cell'];
+
+  if ((name ?? '').length === 3) {
+    classes.push('name-cell--compact');
+  }
+
+  if (isEditing) {
+    classes.push('name-cell--editing');
+  }
+
+  return classes.join(' ');
 }
 
-function createSheet(headerText, names, { editable = false, pageIndex = 0 } = {}) {
+function createSheet(headerText, names, options = {}) {
+  const { editable = false, pageIndex = 0, editingCell = null } = options;
   const rows = chunkNames(names);
 
   return `
@@ -24,11 +35,14 @@ function createSheet(headerText, names, { editable = false, pageIndex = 0 } = {}
                 ${row
                   .map((name, columnIndex) => {
                     const flatIndex = rowIndex * 9 + columnIndex;
-                    const classes = getNameCellClass(name ?? '');
+                    const isEditing =
+                      editable &&
+                      editingCell?.pageIndex === pageIndex &&
+                      editingCell?.nameIndex === flatIndex;
                     const editableAttrs = editable
                       ? ` data-page-index="${pageIndex}" data-name-index="${flatIndex}" tabindex="0"`
                       : '';
-                    return `<td class="${classes}"${editableAttrs}>${name ?? ''}</td>`;
+                    return `<td class="${getNameCellClass(name ?? '', isEditing)}"${editableAttrs}>${name ?? ''}</td>`;
                   })
                   .join('')}
               </tr>
@@ -46,14 +60,82 @@ function renderAllSheets(containerElement, headerText, pages) {
     .join('');
 }
 
-function renderPreview(previewElement, headerText, pages, pageIndex) {
+function renderPreview(previewElement, headerText, pages, pageIndex, editingCell) {
   if (!previewElement) {
     return;
   }
 
   const currentPage = pages[pageIndex] ?? [];
   previewElement.innerHTML =
-    currentPage.length > 0 ? createSheet(headerText, currentPage, { editable: true, pageIndex }) : '';
+    currentPage.length > 0
+      ? createSheet(headerText, currentPage, {
+          editable: true,
+          pageIndex,
+          editingCell
+        })
+      : '';
+}
+
+function renderEditorPanel(panelElement, editingState, currentPages, originalPages, onSave, onCancel, onReset) {
+  if (!panelElement) {
+    return;
+  }
+
+  if (!editingState) {
+    panelElement.innerHTML = `
+      <div class="name-editor-panel name-editor-panel--idle">
+        <p class="name-editor-title">點選預覽中的名字即可編輯</p>
+        <p class="name-editor-help">支援 1 到 3 個中文字；輸入 3 字時會自動縮小，不影響排版。</p>
+      </div>
+    `;
+    return;
+  }
+
+  const { pageIndex, nameIndex } = editingState;
+  const currentValue = currentPages[pageIndex]?.[nameIndex] ?? '';
+  const originalValue = originalPages[pageIndex]?.[nameIndex] ?? currentValue;
+
+  panelElement.innerHTML = `
+    <div class="name-editor-panel">
+      <div class="name-editor-meta">
+        <p class="name-editor-title">正在編輯</p>
+        <p class="name-editor-position">第 ${pageIndex + 1} 頁，第 ${nameIndex + 1} 格</p>
+      </div>
+      <label class="name-editor-field">
+        <span>姓名</span>
+        <input id="name-editor-input" type="text" value="${currentValue}" maxlength="3" />
+      </label>
+      <p class="name-editor-help">只保留 1 到 3 個中文字；若輸入 3 字，預覽會自動縮小字級。</p>
+      <div class="name-editor-actions">
+        <button id="name-editor-save" type="button">儲存</button>
+        <button id="name-editor-cancel" type="button" class="button-secondary">取消</button>
+        <button id="name-editor-reset" type="button" class="button-secondary"${
+          currentValue === originalValue ? ' disabled' : ''
+        }>還原</button>
+      </div>
+    </div>
+  `;
+
+  const input = panelElement.querySelector('#name-editor-input');
+  const saveButton = panelElement.querySelector('#name-editor-save');
+  const cancelButton = panelElement.querySelector('#name-editor-cancel');
+  const resetButton = panelElement.querySelector('#name-editor-reset');
+
+  saveButton?.addEventListener('click', () => onSave(input.value));
+  cancelButton?.addEventListener('click', onCancel);
+  resetButton?.addEventListener('click', onReset);
+  input?.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      onSave(input.value);
+    }
+
+    if (event.key === 'Escape') {
+      onCancel();
+    }
+  });
+  input?.focus();
+  input?.select();
 }
 
 function buildPageOptions(totalPages, currentPageNumber) {
@@ -139,22 +221,6 @@ function setExportLoadingState(exportButton, status, isLoading) {
   }
 }
 
-function createNameEditor(cell, name) {
-  const input = document.createElement('input');
-  input.type = 'text';
-  input.value = name;
-  input.maxLength = 3;
-  input.className = 'name-editor';
-  input.setAttribute('data-name-editor', 'true');
-  input.setAttribute('inputmode', 'text');
-  input.setAttribute('aria-label', '編輯名字');
-  cell.textContent = '';
-  cell.append(input);
-  input.focus();
-  input.select();
-  return input;
-}
-
 export async function setupApp({ loadConfig, buildUniqueNames, exportPdf }) {
   const headerInput = document.querySelector('#header-input');
   const pageCountInput = document.querySelector('#page-count-input');
@@ -166,18 +232,21 @@ export async function setupApp({ loadConfig, buildUniqueNames, exportPdf }) {
   const pageIndicator = document.querySelector('#preview-page-indicator');
   const pageSelect = document.querySelector('#preview-page-select');
   const jumpButton = document.querySelector('#preview-jump-button');
+  const editorPanel = document.querySelector('#name-editor-panel');
   const sheetsContainer = document.querySelector('#print-sheets');
   const status = document.querySelector('#status');
 
   let config;
   let currentPages = [];
+  let originalPages = [];
   let currentPageIndex = 0;
+  let editingState = null;
 
   exportButton.setAttribute('aria-busy', 'false');
   updatePaginationControls(prevButton, nextButton, pageIndicator, pageSelect, jumpButton, 0, 0);
 
   function syncRenderedPages() {
-    renderPreview(previewElement, headerInput.value, currentPages, currentPageIndex);
+    renderPreview(previewElement, headerInput.value, currentPages, currentPageIndex, editingState);
     renderAllSheets(sheetsContainer, headerInput.value, currentPages);
     updatePaginationControls(
       prevButton,
@@ -188,6 +257,40 @@ export async function setupApp({ loadConfig, buildUniqueNames, exportPdf }) {
       currentPageIndex,
       currentPages.length
     );
+    renderEditorPanel(
+      editorPanel,
+      editingState,
+      currentPages,
+      originalPages,
+      (nextValue) => {
+        if (!editingState) {
+          return;
+        }
+
+        const sanitized = sanitizeEditableName(nextValue);
+        if (!sanitized) {
+          return;
+        }
+
+        currentPages[editingState.pageIndex][editingState.nameIndex] = sanitized;
+        editingState = null;
+        syncRenderedPages();
+      },
+      () => {
+        editingState = null;
+        syncRenderedPages();
+      },
+      () => {
+        if (!editingState) {
+          return;
+        }
+
+        currentPages[editingState.pageIndex][editingState.nameIndex] =
+          originalPages[editingState.pageIndex][editingState.nameIndex];
+        editingState = null;
+        syncRenderedPages();
+      }
+    );
   }
 
   function goToPage(pageNumber) {
@@ -195,20 +298,8 @@ export async function setupApp({ loadConfig, buildUniqueNames, exportPdf }) {
       return;
     }
 
+    editingState = null;
     currentPageIndex = Math.min(Math.max(pageNumber - 1, 0), currentPages.length - 1);
-    syncRenderedPages();
-  }
-
-  function saveEditedName(pageIndex, nameIndex, nextValue) {
-    const currentValue = currentPages[pageIndex]?.[nameIndex] ?? '';
-    const sanitized = sanitizeEditableName(nextValue);
-
-    if (!sanitized) {
-      syncRenderedPages();
-      return;
-    }
-
-    currentPages[pageIndex][nameIndex] = sanitized || currentValue;
     syncRenderedPages();
   }
 
@@ -224,6 +315,8 @@ export async function setupApp({ loadConfig, buildUniqueNames, exportPdf }) {
     return;
   }
 
+  syncRenderedPages();
+
   headerInput.addEventListener('input', () => {
     syncRenderedPages();
   });
@@ -232,7 +325,9 @@ export async function setupApp({ loadConfig, buildUniqueNames, exportPdf }) {
     try {
       const pageCount = parsePageCount(pageCountInput);
       currentPages = buildNamesForPages(config, pageCount, buildUniqueNames);
+      originalPages = currentPages.map((page) => [...page]);
       currentPageIndex = 0;
+      editingState = null;
       syncRenderedPages();
       status.textContent = '';
     } catch (error) {
@@ -254,31 +349,15 @@ export async function setupApp({ loadConfig, buildUniqueNames, exportPdf }) {
 
   previewElement?.addEventListener('click', (event) => {
     const cell = event.target.closest('td[data-page-index][data-name-index]');
-    if (!cell || cell.querySelector('input[data-name-editor="true"]')) {
+    if (!cell) {
       return;
     }
 
-    const pageIndex = Number.parseInt(cell.dataset.pageIndex, 10);
-    const nameIndex = Number.parseInt(cell.dataset.nameIndex, 10);
-    const originalName = currentPages[pageIndex]?.[nameIndex] ?? '';
-    const input = createNameEditor(cell, originalName);
-
-    const commit = () => {
-      saveEditedName(pageIndex, nameIndex, input.value);
+    editingState = {
+      pageIndex: Number.parseInt(cell.dataset.pageIndex, 10),
+      nameIndex: Number.parseInt(cell.dataset.nameIndex, 10)
     };
-
-    input.addEventListener('keydown', (keyboardEvent) => {
-      if (keyboardEvent.key === 'Enter') {
-        keyboardEvent.preventDefault();
-        commit();
-      }
-
-      if (keyboardEvent.key === 'Escape') {
-        syncRenderedPages();
-      }
-    });
-
-    input.addEventListener('blur', commit, { once: true });
+    syncRenderedPages();
   });
 
   exportButton.addEventListener('click', async () => {

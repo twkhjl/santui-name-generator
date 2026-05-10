@@ -35,15 +35,22 @@
 
       <section class="preview-panel" aria-label="預覽分頁">
         <div class="preview-toolbar">
-          <button id="preview-prev-button" type="button" class="preview-nav">上一頁</button>
+          <button id="preview-prev-button" type="button" class="preview-nav preview-nav--icon" aria-label="上一頁">
+            <span aria-hidden="true">‹</span>
+          </button>
           <div class="preview-jump-group">
             <label class="sr-only" for="preview-page-select">跳轉頁碼</label>
             <select id="preview-page-select"></select>
             <button id="preview-jump-button" type="button" class="preview-jump-button">跳轉</button>
           </div>
           <p id="preview-page-indicator" class="preview-page-indicator" aria-live="polite">0 / 0</p>
-          <button id="preview-next-button" type="button" class="preview-nav">下一頁</button>
+          <button id="preview-next-button" type="button" class="preview-nav preview-nav--icon" aria-label="下一頁">
+            <span aria-hidden="true">›</span>
+          </button>
         </div>
+
+        <section id="name-editor-panel"></section>
+
         <div class="preview-sheet-frame">
           <div id="preview-sheet" class="preview-sheet"></div>
         </div>
