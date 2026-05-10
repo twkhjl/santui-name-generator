@@ -252,29 +252,91 @@ select {
 button {
   position: relative;
   min-height: 64px;
-  border: 0;
+  border: 1px solid rgba(79, 21, 14, 0.48);
   border-radius: 999px;
   padding: 14px 28px;
   font-size: 1.05rem;
   font-weight: 700;
-  color: #fff;
-  background: linear-gradient(135deg, var(--seal) 0%, var(--seal-dark) 100%);
+  color: #fdf1ea;
+  background:
+    linear-gradient(180deg, rgba(196, 73, 55, 0.96) 0%, rgba(143, 45, 31, 0.98) 55%, rgba(102, 26, 18, 1) 100%);
   box-shadow:
-    0 14px 28px rgba(111, 32, 22, 0.22),
-    inset 0 1px 0 rgba(255, 244, 240, 0.28);
-  transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+    0 16px 26px rgba(111, 32, 22, 0.24),
+    0 5px 0 rgba(90, 23, 16, 0.92),
+    inset 0 1px 0 rgba(255, 227, 216, 0.5),
+    inset 0 -3px 0 rgba(87, 21, 15, 0.7);
+  text-shadow:
+    0 1px 0 rgba(255, 226, 213, 0.34),
+    0 -1px 0 rgba(87, 21, 15, 0.85),
+    0 2px 3px rgba(64, 13, 9, 0.28);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease, background-color 0.2s ease;
 }
 
 button:hover {
-  transform: translateY(-1px);
-  filter: saturate(1.05);
+  transform: translateY(-2px);
+  filter: saturate(1.08) brightness(1.02);
+  box-shadow:
+    0 20px 30px rgba(111, 32, 22, 0.26),
+    0 6px 0 rgba(90, 23, 16, 0.96),
+    inset 0 1px 0 rgba(255, 234, 224, 0.58),
+    inset 0 -3px 0 rgba(87, 21, 15, 0.74);
+}
+
+button:active {
+  transform: translateY(3px);
+  box-shadow:
+    0 8px 14px rgba(111, 32, 22, 0.18),
+    0 2px 0 rgba(90, 23, 16, 0.88),
+    inset 0 2px 4px rgba(78, 18, 13, 0.4),
+    inset 0 -1px 0 rgba(255, 226, 213, 0.22);
+}
+
+button::before {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border-radius: inherit;
+  background: linear-gradient(180deg, rgba(255, 243, 236, 0.18), transparent 32%, transparent 72%, rgba(63, 15, 11, 0.14));
+  pointer-events: none;
+}
+
+button::after {
+  content: "";
+  position: absolute;
+  inset: 8px 14px auto;
+  height: 32%;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(255, 245, 239, 0.22), transparent);
+  pointer-events: none;
 }
 
 .button-secondary {
   color: var(--ink);
   background: linear-gradient(180deg, #efe1cd 0%, #e6d3bc 100%);
   border: 1px solid rgba(111, 78, 55, 0.18);
-  box-shadow: 0 8px 16px rgba(84, 58, 38, 0.1);
+  box-shadow:
+    0 12px 18px rgba(84, 58, 38, 0.12),
+    0 4px 0 rgba(122, 96, 70, 0.45),
+    inset 0 1px 0 rgba(255, 251, 246, 0.78),
+    inset 0 -2px 0 rgba(187, 158, 126, 0.6);
+  text-shadow:
+    0 1px 0 rgba(255, 253, 250, 0.62),
+    0 -1px 0 rgba(134, 104, 76, 0.38);
+}
+
+.button-secondary:hover {
+  box-shadow:
+    0 14px 20px rgba(84, 58, 38, 0.14),
+    0 5px 0 rgba(122, 96, 70, 0.48),
+    inset 0 1px 0 rgba(255, 253, 249, 0.84),
+    inset 0 -2px 0 rgba(187, 158, 126, 0.64);
+}
+
+.button-secondary:active {
+  box-shadow:
+    0 6px 10px rgba(84, 58, 38, 0.1),
+    0 2px 0 rgba(122, 96, 70, 0.42),
+    inset 0 2px 4px rgba(151, 123, 94, 0.24);
 }
 
 button:disabled,
@@ -282,7 +344,11 @@ input:disabled,
 select:disabled {
   cursor: not-allowed;
   opacity: 0.55;
-  box-shadow: none;
+  box-shadow:
+    0 4px 8px rgba(90, 65, 46, 0.08),
+    0 1px 0 rgba(122, 96, 70, 0.24);
+  transform: none;
+  filter: none;
 }
 
 .actions {
@@ -601,6 +667,22 @@ select:disabled {
   input,
   select {
     min-height: 68px;
+  }
+
+  button {
+    box-shadow:
+      0 12px 18px rgba(111, 32, 22, 0.2),
+      0 4px 0 rgba(90, 23, 16, 0.9),
+      inset 0 1px 0 rgba(255, 227, 216, 0.45),
+      inset 0 -2px 0 rgba(87, 21, 15, 0.68);
+  }
+
+  .button-secondary {
+    box-shadow:
+      0 8px 14px rgba(84, 58, 38, 0.1),
+      0 3px 0 rgba(122, 96, 70, 0.42),
+      inset 0 1px 0 rgba(255, 251, 246, 0.74),
+      inset 0 -2px 0 rgba(187, 158, 126, 0.56);
   }
 
   .preview-toolbar {
