@@ -151,7 +151,6 @@ function updatePaginationControls(
   nextButton,
   indicator,
   pageSelect,
-  jumpButton,
   currentPageIndex,
   totalPages
 ) {
@@ -167,10 +166,6 @@ function updatePaginationControls(
     if (totalPages > 0) {
       pageSelect.value = String(currentPageNumber);
     }
-  }
-
-  if (jumpButton) {
-    jumpButton.disabled = totalPages <= 1;
   }
 
   if (prevButton) {
@@ -231,7 +226,6 @@ export async function setupApp({ loadConfig, buildUniqueNames, exportPdf }) {
   const nextButton = document.querySelector('#preview-next-button');
   const pageIndicator = document.querySelector('#preview-page-indicator');
   const pageSelect = document.querySelector('#preview-page-select');
-  const jumpButton = document.querySelector('#preview-jump-button');
   const editorPanel = document.querySelector('#name-editor-panel');
   const sheetsContainer = document.querySelector('#print-sheets');
   const status = document.querySelector('#status');
@@ -243,7 +237,7 @@ export async function setupApp({ loadConfig, buildUniqueNames, exportPdf }) {
   let editingState = null;
 
   exportButton.setAttribute('aria-busy', 'false');
-  updatePaginationControls(prevButton, nextButton, pageIndicator, pageSelect, jumpButton, 0, 0);
+  updatePaginationControls(prevButton, nextButton, pageIndicator, pageSelect, 0, 0);
 
   function syncRenderedPages() {
     renderPreview(previewElement, headerInput.value, currentPages, currentPageIndex, editingState);
@@ -253,7 +247,6 @@ export async function setupApp({ loadConfig, buildUniqueNames, exportPdf }) {
       nextButton,
       pageIndicator,
       pageSelect,
-      jumpButton,
       currentPageIndex,
       currentPages.length
     );
@@ -343,7 +336,7 @@ export async function setupApp({ loadConfig, buildUniqueNames, exportPdf }) {
     goToPage(currentPageIndex + 2);
   });
 
-  jumpButton?.addEventListener('click', () => {
+  pageSelect?.addEventListener('change', () => {
     goToPage(parsePositiveInteger(pageSelect?.value, currentPageIndex + 1));
   });
 

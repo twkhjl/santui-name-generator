@@ -14,7 +14,6 @@ describe('setupApp', () => {
       <button id="export-button" type="button">匯出 PDF</button>
       <button id="preview-prev-button" type="button">上一頁</button>
       <select id="preview-page-select"></select>
-      <button id="preview-jump-button" type="button">跳轉</button>
       <span id="preview-page-indicator"></span>
       <button id="preview-next-button" type="button">下一頁</button>
       <section id="name-editor-panel"></section>
@@ -191,7 +190,7 @@ describe('setupApp', () => {
     expect(document.querySelector('#preview-next-button').disabled).toBe(true);
   });
 
-  it('可使用下拉選單跳轉到指定頁', async () => {
+  it('更動下拉選單後直接跳轉到指定頁', async () => {
     const pages = buildNames('A').concat(buildNames('B'), buildNames('C'));
     const loadConfig = vi.fn().mockResolvedValue({
       defaultHeaderText: '測試標題',
@@ -211,8 +210,9 @@ describe('setupApp', () => {
     document.querySelector('#page-count-input').value = '3';
     document.querySelector('#generate-button').click();
 
-    document.querySelector('#preview-page-select').value = '3';
-    document.querySelector('#preview-jump-button').click();
+    const pageSelect = document.querySelector('#preview-page-select');
+    pageSelect.value = '3';
+    pageSelect.dispatchEvent(new Event('change', { bubbles: true }));
 
     expect(document.querySelector('#preview-page-indicator').textContent).toBe('3 / 3');
     expect(document.querySelector('#preview-sheet').textContent).toContain('C000');
