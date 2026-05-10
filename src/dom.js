@@ -53,7 +53,7 @@ function updatePaginationControls(
   prevButton,
   nextButton,
   indicator,
-  pageInput,
+  pageSelect,
   jumpButton,
   currentPageIndex,
   totalPages
@@ -64,11 +64,13 @@ function updatePaginationControls(
     indicator.textContent = `${displayPage} / ${totalPages}`;
   }
 
-  if (pageInput) {
-    pageInput.min = totalPages === 0 ? '0' : '1';
-    pageInput.max = String(totalPages);
-    pageInput.value = String(displayPage);
-    pageInput.disabled = totalPages <= 1;
+  if (pageSelect) {
+    pageSelect.innerHTML = Array.from({ length: totalPages }, (_, index) => {
+      const pageNumber = index + 1;
+      const selected = pageNumber === displayPage ? ' selected' : '';
+      return `<option value="${pageNumber}"${selected}>第 ${pageNumber} 頁</option>`;
+    }).join('');
+    pageSelect.disabled = totalPages <= 1;
   }
 
   if (jumpButton) {
@@ -132,7 +134,7 @@ export async function setupApp({ loadConfig, buildUniqueNames, exportPdf }) {
   const prevButton = document.querySelector('#preview-prev-button');
   const nextButton = document.querySelector('#preview-next-button');
   const pageIndicator = document.querySelector('#preview-page-indicator');
-  const pageInput = document.querySelector('#preview-page-input');
+  const pageSelect = document.querySelector('#preview-page-select');
   const jumpButton = document.querySelector('#preview-jump-button');
   const sheetsContainer = document.querySelector('#print-sheets');
   const status = document.querySelector('#status');
@@ -142,7 +144,7 @@ export async function setupApp({ loadConfig, buildUniqueNames, exportPdf }) {
   let currentPageIndex = 0;
 
   exportButton.setAttribute('aria-busy', 'false');
-  updatePaginationControls(prevButton, nextButton, pageIndicator, pageInput, jumpButton, 0, 0);
+  updatePaginationControls(prevButton, nextButton, pageIndicator, pageSelect, jumpButton, 0, 0);
 
   function syncRenderedPages() {
     renderPreview(previewElement, headerInput.value, currentPages, currentPageIndex);
@@ -152,7 +154,7 @@ export async function setupApp({ loadConfig, buildUniqueNames, exportPdf }) {
       prevButton,
       nextButton,
       pageIndicator,
-      pageInput,
+      pageSelect,
       jumpButton,
       currentPageIndex,
       currentPages.length
@@ -210,15 +212,7 @@ export async function setupApp({ loadConfig, buildUniqueNames, exportPdf }) {
   });
 
   jumpButton?.addEventListener('click', () => {
-    goToPage(parsePositiveInteger(pageInput?.value, currentPageIndex + 1));
-  });
-
-  pageInput?.addEventListener('keydown', (event) => {
-    if (event.key !== 'Enter') {
-      return;
-    }
-
-    goToPage(parsePositiveInteger(pageInput.value, currentPageIndex + 1));
+    goToPage(parsePositiveInteger(pageSelect?.value, currentPageIndex + 1));
   });
 
   exportButton.addEventListener('click', async () => {

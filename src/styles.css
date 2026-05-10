@@ -150,11 +150,12 @@ input:disabled {
   gap: 12px;
 }
 
-.preview-jump-group input {
+.preview-jump-group select {
   width: 104px;
   min-width: 0;
   min-height: 56px;
   text-align: center;
+  appearance: none;
 }
 
 .preview-jump-button {
@@ -316,7 +317,7 @@ input:disabled {
     grid-template-columns: minmax(0, 1fr) auto;
   }
 
-  .preview-jump-group input {
+  .preview-jump-group select {
     width: 100%;
   }
 
