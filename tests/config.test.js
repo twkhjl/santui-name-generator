@@ -29,7 +29,7 @@ describe('normalizeConfig', () => {
 });
 
 describe('loadConfig', () => {
-  it('從 config.local.json 載入設定檔', async () => {
+  it('從 config.json 載入設定檔', async () => {
     const fetchImpl = vi.fn().mockResolvedValue({
       ok: true,
       json: vi.fn().mockResolvedValue({
@@ -44,6 +44,6 @@ describe('loadConfig', () => {
     await loadConfig(fetchImpl);
 
     expect(fetchImpl).toHaveBeenCalledTimes(1);
-    expect(fetchImpl.mock.calls[0][0]).toMatch(/public\/config\.local\.json$/);
+    expect(fetchImpl.mock.calls[0][0]).toMatch(/config\.json$/);
   });
 });
